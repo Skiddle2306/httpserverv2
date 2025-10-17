@@ -43,8 +43,8 @@ public class parseRequest {
         String sessionid;
         String user;
         String password;
-        if(headers.get("referer")!=null && headers.get("referer").split(":8080")[1].equals("/login")){
-
+        if(Main.allowedPathsBeforeLogin.contains(path)){
+            System.out.println("yay");
         }
         else if(headers.get("Cookie")!=null){
             cookie =headers.get("Cookie");
@@ -67,7 +67,7 @@ public class parseRequest {
 
         if(headers.get("path").equals("/login")){
             user=data.get("username");
-            password=Main.getPassword(user);
+            password=dbConnection.getPassword(user);
             if(user == null || path == null){
                 System.out.println("bruh");
                 return "HTTP/1.1 400 Bad Request";
@@ -85,6 +85,38 @@ public class parseRequest {
                 vars.put("<!-- error-message -->", "Invalid Username/Password");
             }
         }
+        if(headers.get("path").equals("/register")){
+            user=data.get("username");
+            password=data.get("password");
+            String email=data.get("email");
+            String age=data.get("age");
+            String profession=data.get("profession");
+            if(dbConnection.getUsername(user)!=null){
+                vars.put("<!-- error-message -->", "Username already exists");
+                headers.put("path", "/register.html");
+                path="/register.html";
+            }else if(dbConnection.getEmail(email)!=null){
+                vars.put("<!-- error-message -->", "Email is already in use");
+                headers.put("path", "/register.html");
+                path="/register.html";
+            }else{
+                System.out.println(vars.get("username"));
+                dbConnection.addUser(user,password,email,age,profession);
+                String sessionId= genSession();
+                Main.setSession(sessionId,data.get("username"));
+                setCookie=("\nSet-Cookie: sessionId=" + sessionId + "; Path=/; SameSite=Lax");
+                headers.put("path", "/");
+                path="/";
+            }
+        }
+        if(headers.get("path").equals("/logout")){
+
+        }
+        if(headers.get("path").equals("/")){
+            headers.put("path", "/hello.html");
+            path="/hello.html";
+        }
+
         System.out.println(headers.get("path"));
 
 
@@ -94,7 +126,7 @@ public class parseRequest {
             response=response.concat(" 503");
         }else {
             try{
-                Scanner sc = new Scanner(new File("/home/Ayush/IdeaProjects/httpServer/templates"+path));
+                Scanner sc = new Scanner(new File("/home/Ayush/IdeaProjects/httpServerv2/src/main/resources"+path));
                 response = response.concat(" 200 OK");
                 StringBuilder builder = new StringBuilder();
                 while(sc.hasNextLine()){
@@ -167,4 +199,5 @@ public class parseRequest {
     private String genSession() throws IOException {
         return UUID.randomUUID().toString();
     }
+
 }

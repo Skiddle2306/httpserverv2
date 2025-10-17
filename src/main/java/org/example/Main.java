@@ -1,4 +1,5 @@
 package org.example;
+import javax.swing.plaf.nimbus.State;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -10,16 +11,19 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Scanner;
 public class Main {
-    private static String jdbcURL = "jdbc:postgresql://localhost:5432/httpserver";
-    private static String username = "postgres";
-    private static String password = "password";
+
     private static HashMap<String,String> session=new HashMap<>();//session id and username
     private static Connection connection;
+    public static HashSet<String> allowedPathsBeforeLogin=new HashSet<>();
+
+
     public static void main(String[] args){
+        setAllowedPathsBeforeLogin();
         try{
-            dbConnection();
+            dbConnection.getConnection();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -58,38 +62,12 @@ public class Main {
         session.put(ses,username);
         System.out.println(ses);
         System.out.println(username);
-    }private static void dbConnection(){
-        try {
-            // Load the PostgreSQL JDBC driver
-            Class.forName("org.postgresql.Driver");
-            // Establish the connection
-            connection = DriverManager.getConnection(
-                    jdbcURL, username, password);
-            System.out.println(
-                    "Connected to PostgreSQL database!");
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
     }
-    public static String getPassword(String user){
-        try{
-            String query = "SELECT password FROM userdetails WHERE username = ?";
-            PreparedStatement statement = connection.prepareStatement(query);
-            statement.setString(1, user);  // Set the username parameter in the query
-            // Execute the query and get the result
-            ResultSet resultSet = statement.executeQuery();
 
-            if (resultSet.next()) {
-                String retrievedPassword = resultSet.getString("password");  // Retrieve the password
-                System.out.println("Password for user " + user + " is: " + retrievedPassword);
-                return retrievedPassword;
-            } else {
-                System.out.println("Username not found.");
-                return null;
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    private static void setAllowedPathsBeforeLogin(){
+        allowedPathsBeforeLogin.add("/login");
+        allowedPathsBeforeLogin.add("/register");
+        allowedPathsBeforeLogin.add("/login.html");
+        allowedPathsBeforeLogin.add("/register.html");
     }
 }
