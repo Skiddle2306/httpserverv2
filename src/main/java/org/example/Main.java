@@ -39,8 +39,8 @@ public class Main {
                 System.out.println("Client accepted");
                 input = new Scanner(client.getInputStream());
                 BufferedReader reader = new BufferedReader(new InputStreamReader(client.getInputStream()));
-                parseRequest request=new parseRequest();
-                String response = request.requestParser(reader);
+                parse request=new parse();
+                String response = request.parseRequest(reader);
                 PrintWriter out = new PrintWriter(client.getOutputStream(),true);
                 System.out.println(response);
                 out.println(response);
@@ -60,7 +60,6 @@ public class Main {
         System.out.println(ses);
         System.out.println(username);
     }
-
     private static void setAllowedPathsBeforeLogin(){
         allowedPathsBeforeLogin.add("/login");
         allowedPathsBeforeLogin.add("/register");

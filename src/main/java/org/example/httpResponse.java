@@ -25,9 +25,8 @@ public class httpResponse {
     public void addCookie(String key,String value){
         cookies.put(key,value);
     }
-    public void addBody(int bytes,String type,String body){
+    public void addBody(int bytes,String body){
         this.bytes=bytes;
-        this.type=type;
         this.body=body;
     }
     public String getResponse(){
