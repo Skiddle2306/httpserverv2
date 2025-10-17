@@ -1,5 +1,4 @@
 package org.example;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -12,7 +11,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Scanner;
-
 public class Main {
     private static String jdbcURL = "jdbc:postgresql://localhost:5432/httpserver";
     private static String username = "postgres";
@@ -25,7 +23,6 @@ public class Main {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-
         Scanner input;
         ServerSocket serverSocket;
         try{

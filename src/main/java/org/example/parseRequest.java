@@ -36,12 +36,13 @@ public class parseRequest {
             return "HTTP/1.1 400 Bad Request";
         }
     }
-    private String path(HashMap<String,String> vars){
+    private String path(HashMap<String,String> vars) throws IOException {
         String version=headers.get("version");
         String path = headers.get("path");
         String cookie;
         String sessionid;
         String user;
+        String password;
         if(headers.get("referer")!=null && headers.get("referer").split(":8080")[1].equals("/login")){
 
         }
@@ -63,6 +64,30 @@ public class parseRequest {
             vars.put("<!-- error-message -->", "Please Login before using our site.");
             path="/login.html";
         }
+
+        if(headers.get("path").equals("/login")){
+            user=data.get("username");
+            password=Main.getPassword(user);
+            if(user == null || path == null){
+                System.out.println("bruh");
+                return "HTTP/1.1 400 Bad Request";
+            }
+            if(data.get("password").equals(password)){
+                System.out.println("Login Successful");
+                String sessionId= genSession();
+                Main.setSession(sessionId,data.get("username"));
+                setCookie=("\nSet-Cookie: sessionId=" + sessionId + "; Path=/; SameSite=Lax");
+                headers.put("path", "/hello.html");
+                path="/hello.html";
+            }else{
+                System.out.println("Login Failed");
+                headers.put("path", "/login.html");
+                vars.put("<!-- error-message -->", "Invalid Username/Password");
+            }
+        }
+        System.out.println(headers.get("path"));
+
+
         response = response.concat(version);
         if(path == null){
             System.out.println("No path provided");
@@ -135,22 +160,6 @@ public class parseRequest {
         HashMap<String,String> vars =new HashMap<>();
         readHeaders();
         readBody();
-        if(headers.get("path").equals("/login")){
-            String user=data.get("username");
-            String password=Main.getPassword(user);
-            if(data.get("password").equals(password)){
-                System.out.println("Login Successful");
-                String sessionId= genSession();
-                Main.setSession(sessionId,data.get("username"));
-                setCookie=("\nSet-Cookie: sessionId=" + sessionId + "; Path=/; SameSite=Lax");
-                headers.put("path", "/hello.html");
-            }else{
-                System.out.println("Login Failed");
-                headers.put("path", "/login.html");
-                vars.put("<!-- error-message -->", "Invalid Username/Password");
-            }
-        }
-        System.out.println(headers.get("path"));
         if(headers.isEmpty())
             return "HTTP/1.1 400 Bad Request";
         return path(vars);
