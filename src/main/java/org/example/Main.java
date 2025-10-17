@@ -14,12 +14,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
 public class Main {
-
     private static HashMap<String,String> session=new HashMap<>();//session id and username
     private static Connection connection;
     public static HashSet<String> allowedPathsBeforeLogin=new HashSet<>();
-
-
     public static void main(String[] args){
         setAllowedPathsBeforeLogin();
         try{
@@ -52,7 +49,7 @@ public class Main {
                 client.close();
             }catch (IOException e){
                 System.out.println(e.getMessage());
-            }
+                }
         }
     }
     public static HashMap<String, String> getSession() {

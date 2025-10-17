@@ -8,19 +8,23 @@ import java.util.UUID;
 public class parseRequest {
     protected HashMap<String,String> headers=new HashMap<>();
     private BufferedReader reader;
-    protected String response= "";
+    private httpResponse res;
     String setCookie=null;
+    String path;
+    int bytes;
+    String body;
     private HashMap<String,String> data=new HashMap<>();
+            HashMap<String,String> vars =new HashMap<>();
+
     public String requestParser(BufferedReader reader) throws IOException {
         this.reader=reader;
         String line = reader.readLine();
         if(line==null){
-            return "HTTP/1.1 400 Bad Request";
+            res=new httpResponse("HTTP/1.1",400,"Bad Request");
+            return res.toString();
         }
-        System.out.println(line);
         if(!line.isEmpty()) {
             String[] firstLine = line.split(" ");
-            System.out.println();
             headers.put("method", firstLine[0]);
             headers.put("path", firstLine[1]);
             headers.put("version", firstLine[2]);
@@ -29,22 +33,23 @@ public class parseRequest {
             }else if(headers.get("method").equals("POST")){
                 return postRequest();
             }else{
-                return "HTTP/1.1 400 Bad Request";
+                res=new httpResponse("HTTP/1.1",400,"Bad Request");
+            return res.toString();
             }
         }else {
-            System.out.println("Cannot parse request");
-            return "HTTP/1.1 400 Bad Request";
+            res=new httpResponse("HTTP/1.1",400,"Bad Request");
+            return res.toString();
         }
     }
-    private String path(HashMap<String,String> vars) throws IOException {
+    private String path() throws IOException {
         String version=headers.get("version");
-        String path = headers.get("path");
+        path = headers.get("path");
         String cookie;
         String sessionid;
         String user;
         String password;
         if(Main.allowedPathsBeforeLogin.contains(path)){
-            System.out.println("yay");
+
         }
         else if(headers.get("Cookie")!=null){
             cookie =headers.get("Cookie");
@@ -69,19 +74,25 @@ public class parseRequest {
             user=data.get("username");
             password=dbConnection.getPassword(user);
             if(user == null || path == null){
-                System.out.println("bruh");
-                return "HTTP/1.1 400 Bad Request";
+                res=new httpResponse("HTTP/1.1",400,"Bad Request");
+            return res.toString();
             }
             if(data.get("password").equals(password)){
                 System.out.println("Login Successful");
                 String sessionId= genSession();
                 Main.setSession(sessionId,data.get("username"));
-                setCookie=("\nSet-Cookie: sessionId=" + sessionId + "; Path=/; SameSite=Lax");
                 headers.put("path", "/hello.html");
                 path="/hello.html";
+                res=new httpResponse("HTTP/1.1",302,"Found");
+                res.addHeader("Location",path);
+                res.addCookie("sessionId",sessionId);
+                setCookie=("\nSet-Cookie: sessionId=" + sessionId + "; Path=/; SameSite=Lax");
+                System.out.println(res.toString());
+                return res.getResponse();
             }else{
                 System.out.println("Login Failed");
                 headers.put("path", "/login.html");
+                path="/login.html";
                 vars.put("<!-- error-message -->", "Invalid Username/Password");
             }
         }
@@ -100,13 +111,15 @@ public class parseRequest {
                 headers.put("path", "/register.html");
                 path="/register.html";
             }else{
-                System.out.println(vars.get("username"));
                 dbConnection.addUser(user,password,email,age,profession);
                 String sessionId= genSession();
                 Main.setSession(sessionId,data.get("username"));
-                setCookie=("\nSet-Cookie: sessionId=" + sessionId + "; Path=/; SameSite=Lax");
-                headers.put("path", "/");
-                path="/";
+                headers.put("path", "/hello.html");
+                path="/hello.html";
+                res=new httpResponse(version,302,"Found");
+                res.addHeader("Location",path);
+                res.addCookie("sessionId",sessionId);
+                return res.getResponse();
             }
         }
         if(headers.get("path").equals("/logout")){
@@ -117,47 +130,26 @@ public class parseRequest {
             path="/hello.html";
         }
 
-        System.out.println(headers.get("path"));
 
 
-        response = response.concat(version);
         if(path == null){
-            System.out.println("No path provided");
-            response=response.concat(" 503");
+            res=new httpResponse("HTTP/1.1",404,"Not Found");
+            return res.getResponse();
         }else {
-            try{
-                Scanner sc = new Scanner(new File("/home/Ayush/IdeaProjects/httpServerv2/src/main/resources"+path));
-                response = response.concat(" 200 OK");
-                StringBuilder builder = new StringBuilder();
-                while(sc.hasNextLine()){
-                    String line = sc.nextLine();
-                    for(String key : vars.keySet()){
-                        if(line.contains(key)){
-                            line = line.replace(key,vars.get(key));
-                        }
-                    }
-                    builder.append(line);
-                }
-                if(setCookie!=null){
-                    response=response.concat(setCookie);
-                }
-                int bytes=builder.toString().getBytes().length;
-                response=response.concat("\nContent-Length: "+bytes+"\n");
-                response=response.concat("Content-Type: text/html; charset=UTF-8\n\n");
-                response = response.concat(builder.toString());
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-                System.out.println("Invalid path provided");
-                response=response.concat(" 400");
+            genFile();
+            if(bytes==0){
+                res=new httpResponse("HTTP/1.1",404,"Not Found");
+                return res.getResponse();
             }
+            res=new httpResponse("HTTP/1.1",200,"OK");
+            res.addBody(bytes,"text/html",body);
         }
-        return response;
+        return res.getResponse();
     }
     private void readHeaders() throws IOException {
         String line = " ";
         while (true) {
             line =reader.readLine();
-            System.out.println(line);
             if (line.isEmpty()) {
                 break;
             }
@@ -169,35 +161,58 @@ public class parseRequest {
     }
     private void readBody() throws IOException {
         if(headers.containsKey("Content-Type")){
-            System.out.println(headers.get("Content-Type"));
             if(headers.get("Content-Type").equals("application/x-www-form-urlencoded")){
-                System.out.println("works");
                 int length=Integer.parseInt(headers.get("Content-Length"));
-                System.out.println(length);
                 char[] body=new char[length];
                 reader.read(body,0,length);
-                System.out.println(body);
                 data=parseMethods.parseUrlencoded(new String(body));
             }
         }
     }
     private String getResponse() throws IOException {
-        HashMap<String,String> vars =new HashMap<>();
         readHeaders();
-        if(headers.isEmpty())
-            return "HTTP/1.1 400 Bad Request";
-        return path(vars);
+        if(headers.isEmpty()) {
+            res = new httpResponse("HTTP/1.1", 400, "Bad Request");
+            return res.toString();
+        }
+        return path();
     }
     private String postRequest() throws IOException {
         HashMap<String,String> vars =new HashMap<>();
         readHeaders();
         readBody();
-        if(headers.isEmpty())
-            return "HTTP/1.1 400 Bad Request";
-        return path(vars);
+        if(headers.isEmpty()) {
+            res=new httpResponse("HTTP/1.1",400,"Bad Request");
+            return res.toString();
+        }
+        return path();
     }
     private String genSession() throws IOException {
         return UUID.randomUUID().toString();
     }
 
+    public  void genFile(){
+        try{
+            System.out.println(path);
+                Scanner sc = new Scanner(new File("/home/Ayush/IdeaProjects/httpServerv2/src/main/resources"+path));
+                StringBuilder builder = new StringBuilder();
+                while(sc.hasNextLine()){
+                    String line = sc.nextLine();
+                    for(String key : vars.keySet()){
+                        if(line.contains(key)){
+                            line = line.replace(key,vars.get(key));
+                        }
+                    }
+                    builder.append(line);
+                }
+                bytes=builder.toString().getBytes().length;
+
+                body= builder.toString();
+
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+                System.out.println("Invalid path provided");
+            }
+
+    }
 }

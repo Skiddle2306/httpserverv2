@@ -91,12 +91,13 @@ public class dbConnection {
         try{
             String query = "insert into userdetails (username,password,email,age,profession) values (?,?,?,?,?)";
             PreparedStatement statement = connection.prepareStatement(query);
-            statement.setString(1, user);  // Set the username parameter in the query
+            int count=1;
+            statement.setString(count++, user);  // Set the username parameter in the query
             // Execute the query and get the result
-            statement.setString(2, password);
-            statement.setString(3, email);
-            statement.setInt(4, Integer.parseInt(age));
-            statement.setString(5, profession);
+            statement.setString(count++, password);
+            statement.setString(count++, email);
+            statement.setInt(count++, Integer.parseInt(age));
+            statement.setString(count++, profession);
             System.out.println(statement);
             int queryResult = statement.executeUpdate();
             if (queryResult > 0) {
